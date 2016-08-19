@@ -350,7 +350,14 @@ var text = {
                 if (match.index === _expressionRegex.lastIndex) {
                     _expressionRegex.lastIndex++;
                 }
-
+                /*const _expression = "expression";
+                const _tagName = `${_domNameSpace}-${_expression}`;
+                const element = _document.createElement(_tagName);
+                 element.setAttribute(`${_tagName}-data`, match[1]);
+                element.textContent = match[1];
+                 window.a = node.parentNode;
+                node.parentNode.innerHTML = node.parentNode.innerHTML.replace(match[0], element.outerHTML);
+                */
                 result.push({
                     match: match[0],
                     data: match[1],
