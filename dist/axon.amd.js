@@ -380,10 +380,15 @@ define('axon', function () {
         onDigest: function onDigest(ctrl, context, entry) {
             var result = ctrl[entry.data];
 
-            entry.parent.textContent = replaceFrom(entry.parent.textContent, entry.val, result, entry.index);
-            entry.val = result;
+            if (typeof result !== "undefined") {
+                console.log("EXPR:", entry.val, result, entry.index);
+                entry.parent.textContent = replaceFrom(entry.parent.textContent, entry.val, result, entry.index);
+                entry.val = result;
 
-            return result;
+                return result;
+            } else {
+                throw "Error in Expression:" + entry.data;
+            }
         }
     };
 
@@ -399,15 +404,23 @@ define('axon', function () {
      * @return {Node} context The Controller context
      */
     function digest(ctrl) {
-        //@TODO implement debounce
 
-        iteratePlugins(directives, ctrl.$directives, function (entry, plugin) {
-            plugin.onDigest(ctrl, ctrl.$context, entry);
-        });
+        //Debounce Digest
+        if (!ctrl.$data.isDigesting) {
+            ctrl.$data.isDigesting = true;
 
-        iteratePlugins(expressions, ctrl.$expressions, function (entry, plugin) {
-            plugin.onDigest(ctrl, ctrl.$context, entry);
-        });
+            iteratePlugins(directives, ctrl.$directives, function (entry, plugin) {
+                plugin.onDigest(ctrl, ctrl.$context, entry);
+            });
+
+            iteratePlugins(expressions, ctrl.$expressions, function (entry, plugin) {
+                plugin.onDigest(ctrl, ctrl.$context, entry);
+            });
+
+            setTimeout(function () {
+                ctrl.$data.isDigesting = false;
+            }, ctrl.$data.digestTimeout);
+        }
 
         function iteratePlugins(pluginData, data, fn) {
             eachObject(pluginData, function (plugin, key) {
@@ -463,7 +476,7 @@ define('axon', function () {
                     var content = dom.value;
                     var modelFor = readDirective(dom, "model");
 
-                    console.log("MODEL:", modelFor, content);
+                    //console.log("MODEL:", modelFor, content);
                     ctrl[modelFor] = content;
 
                     digest(ctrl);
@@ -532,11 +545,17 @@ define('axon', function () {
         var ctrl = service.fn = new (Function.prototype.bind.apply(service.fn, bundle))();
 
         //Bind Context
-        ctrl.$context = queryDirective("controller", service.name)[0];
-        ctrl.$expressions = bindExpressions(ctrl);
-        ctrl.$directives = bindDirectives(ctrl);
-        //run first digest
-        digest(ctrl);
+        _document.addEventListener("DOMContentLoaded", function (event) {
+            ctrl.$context = queryDirective("controller", service.name)[0];
+            ctrl.$expressions = bindExpressions(ctrl);
+            ctrl.$directives = bindDirectives(ctrl);
+            ctrl.$data = {
+                isDigesting: false,
+                digestTimeout: 100
+            };
+            //run first digest
+            digest(ctrl);
+        });
 
         console.log(service);
 

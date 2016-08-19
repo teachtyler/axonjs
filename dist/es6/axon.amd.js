@@ -336,7 +336,7 @@ define('axon', function () { 'use strict';
     }
 
     var text = {
-        onBind: function(ctrl, context) {
+        onBind: function (ctrl, context) {
             const result = [];
             const nodes = getTextNodes(context);
             let match;
@@ -374,13 +374,18 @@ define('axon', function () { 'use strict';
                 return all;
             }
         },
-        onDigest: function(ctrl, context, entry) {
+        onDigest: function (ctrl, context, entry) {
             const result = ctrl[entry.data];
 
-            entry.parent.textContent = replaceFrom(entry.parent.textContent, entry.val, result, entry.index);
-            entry.val = result;
+            if (typeof result !== "undefined") {
+                console.log("EXPR:", entry.val, result, entry.index);
+                entry.parent.textContent = replaceFrom(entry.parent.textContent, entry.val, result, entry.index);
+                entry.val = result;
 
-            return result;
+                return result;
+            } else {
+                throw "Error in Expression:" + entry.data;
+            }
         }
     };
 
@@ -395,17 +400,24 @@ define('axon', function () { 'use strict';
      * @param {Object} ctrl The Controller
      * @return {Node} context The Controller context
      */
-    function digest(ctrl) {
-        //@TODO implement debounce
+    function digest (ctrl) {
 
-        iteratePlugins(directives, ctrl.$directives, (entry, plugin) => {
-            plugin.onDigest(ctrl, ctrl.$context, entry);
-        });
+        //Debounce Digest
+        if (!ctrl.$data.isDigesting) {
+            ctrl.$data.isDigesting = true;
 
-        iteratePlugins(expressions, ctrl.$expressions, (entry, plugin) => {
-            plugin.onDigest(ctrl, ctrl.$context, entry);
-        });
+            iteratePlugins(directives, ctrl.$directives, (entry, plugin) => {
+                plugin.onDigest(ctrl, ctrl.$context, entry);
+            });
 
+            iteratePlugins(expressions, ctrl.$expressions, (entry, plugin) => {
+                plugin.onDigest(ctrl, ctrl.$context, entry);
+            });
+
+            setTimeout(() => {
+                ctrl.$data.isDigesting = false;
+            }, ctrl.$data.digestTimeout);
+        }
 
         function iteratePlugins(pluginData, data, fn) {
             eachObject(pluginData, (plugin, key) => {
@@ -461,7 +473,7 @@ define('axon', function () { 'use strict';
                     const content = dom.value;
                     const modelFor = readDirective(dom, "model");
 
-                    console.log("MODEL:", modelFor, content);
+                    //console.log("MODEL:", modelFor, content);
                     ctrl[modelFor] = content;
 
                     digest(ctrl);
@@ -521,7 +533,7 @@ define('axon', function () { 'use strict';
      * @param {Object} bundle The service deps
      * @return {Function} service
      */
-    function controllerFn(service, bundle) {
+    function controllerFn (service, bundle) {
         //Construct Controller
         //
         //First value gets ignored by calling new like this, so we need to fill it
@@ -529,13 +541,18 @@ define('axon', function () { 'use strict';
         //Apply into new constructor by accessing bind proto. from: http://stackoverflow.com/questions/1606797/use-of-apply-with-new-operator-is-this-possible
         const ctrl = service.fn = new(Function.prototype.bind.apply(service.fn, bundle));
 
-
         //Bind Context
-        ctrl.$context = queryDirective("controller", service.name)[0];
-        ctrl.$expressions = bindExpressions(ctrl);
-        ctrl.$directives = bindDirectives(ctrl);
-        //run first digest
-        digest(ctrl);
+        _document.addEventListener("DOMContentLoaded", function (event) {
+            ctrl.$context = queryDirective("controller", service.name)[0];
+            ctrl.$expressions = bindExpressions(ctrl);
+            ctrl.$directives = bindDirectives(ctrl);
+            ctrl.$data = {
+                isDigesting: false,
+                digestTimeout: 100
+            };
+            //run first digest
+            digest(ctrl);
+        });
 
         console.log(service);
 

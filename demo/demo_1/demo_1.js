@@ -2,7 +2,7 @@
 
 let app = new Axon("myApp");
 
-app.controller("myController", [], function() {
+app.controller("myController", [], function () {
     const vm = this;
     window.vm = this;
 
@@ -11,7 +11,11 @@ app.controller("myController", [], function() {
 
     vm.fooBar = vm.foo + vm.bar;
 
-    vm.updateFooBar = function() {
+    vm.fizz = {
+        buzz: "fizzBuzz"
+    };
+
+    vm.updateFooBar = function () {
         vm.fooBar = vm.foo + vm.bar;
     };
 });

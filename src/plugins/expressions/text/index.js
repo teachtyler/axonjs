@@ -8,7 +8,7 @@ import {
 } from "../../../util";
 
 export default {
-    onBind: function(ctrl, context) {
+    onBind: function (ctrl, context) {
         const result = [];
         const nodes = getTextNodes(context);
         let match;
@@ -46,12 +46,17 @@ export default {
             return all;
         }
     },
-    onDigest: function(ctrl, context, entry) {
+    onDigest: function (ctrl, context, entry) {
         const result = ctrl[entry.data];
 
-        entry.parent.textContent = replaceFrom(entry.parent.textContent, entry.val, result, entry.index);
-        entry.val = result;
+        if (typeof result !== "undefined") {
+            console.log("EXPR:", entry.val, result, entry.index);
+            entry.parent.textContent = replaceFrom(entry.parent.textContent, entry.val, result, entry.index);
+            entry.val = result;
 
-        return result;
+            return result;
+        } else {
+            throw "Error in Expression:" + entry.data;
+        }
     }
 };

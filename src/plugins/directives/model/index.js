@@ -39,7 +39,7 @@ export default {
                 const content = dom.value;
                 const modelFor = readDirective(dom, "model");
 
-                console.log("MODEL:", modelFor, content);
+                //console.log("MODEL:", modelFor, content);
                 ctrl[modelFor] = content;
 
                 digest(ctrl);
